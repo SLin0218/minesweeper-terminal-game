@@ -315,7 +315,7 @@ def main(stdscr):
             pass
 
         if game.check_win():
-            game.draw_status(" You Win ")
+            game.draw_status(" YouWin ")
 
         if key == ord('q'):
             return
