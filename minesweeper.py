@@ -18,10 +18,6 @@ ICON_MINE = "*"
 
 class Minesweeper:
 
-    # 顶部偏移量
-    top_offset = 1
-    # 左侧偏移量
-    left_offset = 3
     # x轴字符倍率 3x:1y
     x_multiple = 3
 
@@ -29,6 +25,9 @@ class Minesweeper:
         self.width = width
         self.height = height
         self.num_mines = num_mines
+        self.num_flag = num_mines
+        self.num_revealed = 0
+
         self.board = [[' ' for _ in range(width)] for _ in range(height)]
         self.mines = [[False for _ in range(width)] for _ in range(height)]
         self.revealed = [[False for _ in range(width)] for _ in range(height)]
@@ -37,6 +36,10 @@ class Minesweeper:
         self.cursor_x = 0
         self.cursor_y = 0
         self.start_time = 0
+        # 顶部偏移量
+        self.top_offset = 1
+        # 左侧偏移量
+        self.left_offset = 3
         self.place_mines()
         self.stdscr = stdscr
         self.init_color()
@@ -122,7 +125,7 @@ class Minesweeper:
 
         if self.mines[y][x]:
             self.game_over = True
-            self.draw_over_status()
+            self.draw_status(' GameOver ')
             # Reveal all mines when game is over
             for my in range(self.height):
                 for mx in range(self.width):
@@ -139,27 +142,23 @@ class Minesweeper:
                         self.reveal(new_x, new_y)
         else:
             self.board[y][x] = str(adjacent_mines)
+        self.num_revealed += 1
 
-    def draw_over_status(self):
-        status_bar = f'R: Restart ━━━━━━━ GameOver ━━━━━━━'
-        self.stdscr.addstr(0, 37, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
+    def draw_status(self, status):
+        self.stdscr.addstr(self.height + self.top_offset, (self.width * self.x_multiple) // 2 - 2, status, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
 
     def toggle_flag(self, x, y):
         if not self.revealed[y][x]:
             if self.flags[y][x]:
-                self.num_mines += 1
+                self.num_flag += 1
             else:
-                self.num_mines -= 1
+                self.num_flag -= 1
             self.flags[y][x] = not self.flags[y][x]
             self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]',  curses.color_pair(self.get_color(x, y)))
             self.refresh_mine()
 
     def check_win(self):
-        for y in range(self.height):
-            for x in range(self.width):
-                if not self.mines[y][x] and not self.revealed[y][x]:
-                    return False
-        return True
+        return self.num_revealed == self.height * self.width - self.num_mines
 
     def draw_game(self):
         """使用 curses 绘制游戏板和状态栏"""
@@ -193,23 +192,25 @@ class Minesweeper:
                 self.stdscr.addstr(y + self.top_offset, x * self.x_multiple + self.left_offset, content, attr)
 
     def refresh_time(self):
-        if not self.game_over:
+        if not self.game_over and not self.check_win():
             elapsed_time = int(time.time() - (self.start_time if self.start_time is not None else time.time()))
             status_bar = f'{elapsed_time:03d}'
-            self.stdscr.addstr(0, 21, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
+            self.stdscr.addstr(0, (self.width * self.x_multiple) // 2 + 11, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
 
     def refresh_mine(self):
-        status_bar = f'{self.num_mines:02d}'
-        self.stdscr.addstr(0, 10, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
+        if (self.check_win()):
+            self.num_flag = 0
+        status_bar = f'{self.num_flag:02d}'
+        self.stdscr.addstr(0, (self.width * self.x_multiple) // 2, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
 
     def draw_border(self):
         # --- 绘制状态栏 ---
-        status_bar = f'┏━ MINE: {self.num_mines:02d} | TIME: 000 | Q: Quit | F: Flag | R: Reveal '
-        top_border = ' ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ '
-        bottom_border = ' ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ '
+        status_bar = f' MINE: {self.num_flag:02d} | TIME: 000 '
+        top_border = f' ┏{"━" * (self.width * self.x_multiple + self.left_offset - 1) }┓ '
+        bottom_border = f' ┗{"━" * (self.width * self.x_multiple + self.left_offset - 1) }┛ '
         # 绘制状态栏在第一行
         self.stdscr.addstr(0, 0, top_border, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
-        self.stdscr.addstr(0, 1, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
+        self.stdscr.addstr(0, (self.width * self.x_multiple) // 2 - 7, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
         for y in range(self.height):
             self.stdscr.addstr(y + self.top_offset, 0, " ┃ ", curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
             self.stdscr.addstr(y + self.top_offset, self.width * self.x_multiple + self.left_offset, " ┃ ", curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
@@ -239,40 +240,7 @@ class Minesweeper:
             self.cursor_y += 1
             self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
 
-# def get_custom_config():
-#     while True:
-#         try:
-#             print("\nEnter board width (8-30): ")
-#             width = int(get_char())
-#             if not 8 <= width <= 30:
-#                 print("Width must be between 8 and 30")
-#                 continue
-#
-#             print("\nEnter board height (8-30): ")
-#             height = int(get_char())
-#             if not 8 <= height <= 30:
-#                 print("Height must be between 8 and 30")
-#                 continue
-#
-#             max_mines = (width * height) - 1
-#             print(f"\nEnter number of mines (1-{max_mines}): ")
-#             mines = int(get_char())
-#             if not 1 <= mines <= max_mines:
-#                 print(f"Number of mines must be between 1 and {max_mines}")
-#                 continue
-#
-#             return width, height, mines
-#         except ValueError:
-#             print("Please enter valid numbers")
-
 def main(stdscr):
-    print("Welcome to Minesweeper!")
-    print("\nSelect difficulty:")
-    print("1. Easy (9x9, 10 mines)")
-    print("2. Medium (16x16, 40 mines)")
-    print("3. Hard (16x30, 99 mines)")
-    print("4. Custom")
-    print("\nPress 1-4 to select: ")
 
     curses.start_color()
     curses.curs_set(0)
@@ -283,7 +251,40 @@ def main(stdscr):
     except curses.error:
         pass
 
-    game = Minesweeper(stdscr, 30, 16, 99)
+    stdscr.addstr(0, 1, "Welcome to Minesweeper!")
+    stdscr.addstr(1, 1, "Select difficulty:")
+    stdscr.addstr(2, 1, "1. Easy (9x9, 10 mines)")
+    stdscr.addstr(3, 1, "2. Medium (16x16, 40 mines)")
+    stdscr.addstr(4, 1, "3. Hard (16x30, 99 mines)")
+    stdscr.addstr(6, 1, "Press 1-3 to select: ")
+
+    width = 0
+    height = 0
+    num_mines = 0
+
+    while True:
+        key = stdscr.getch()
+        if key == -1:
+            continue
+        if key == ord('q'):
+            return
+        elif key == 49:
+            height = 9
+            width = 9
+            num_mines = 10
+            break
+        elif key == 50:
+            height = 16
+            width = 16
+            num_mines = 40
+            break
+        elif key == 51:
+            height = 16
+            width = 30
+            num_mines = 99
+            break
+
+    game = Minesweeper(stdscr, width, height, num_mines)
     game.start_time = int(time.time())
     stdscr.clear()
     game.draw_border()
@@ -291,14 +292,12 @@ def main(stdscr):
 
     while True:
         key = stdscr.getch()
-        # 300ms 间隔，用于更新计时器和防止 CPU 过载
+        # 更新计时器
         game.refresh_time()
-
         if key == -1:
             continue
 
-        if not game.game_over:
-            # 移动 (Vim 键位: h/j/k/l)
+        if not game.game_over and not game.check_win():
             if key == ord('h'):
                 game.left_move()
             elif key == ord('l') and game.cursor_x < game.width - 1:
@@ -307,7 +306,6 @@ def main(stdscr):
                 game.up_move()
             elif key == ord('j') and game.cursor_y < game.height - 1:
                 game.down_move()
-            # 操作
             elif key == ord('r'):
                 game.reveal(game.cursor_x, game.cursor_y)
                 game.draw_game()
@@ -315,6 +313,10 @@ def main(stdscr):
                 game.toggle_flag(game.cursor_x, game.cursor_y)
         else:
             pass
+
+        if game.check_win():
+            game.draw_status(" You Win ")
+
         if key == ord('q'):
             return
 
