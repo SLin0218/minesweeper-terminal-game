@@ -35,7 +35,7 @@ class Minesweeper:
         self.game_over = False
         self.cursor_x = 0
         self.cursor_y = 0
-        self.start_time = 0
+        self.start_time = int(time.time())
         # 顶部偏移量
         self.top_offset = 1
         # 左侧偏移量
@@ -43,6 +43,9 @@ class Minesweeper:
         self.place_mines()
         self.stdscr = stdscr
         self.init_color()
+        self.stdscr.clear()
+        self.draw_border()
+        self.draw_game()
 
     def init_color(self):
         # 1. 未揭开的单元格 (黑字白底)
@@ -143,6 +146,7 @@ class Minesweeper:
         else:
             self.board[y][x] = str(adjacent_mines)
         self.num_revealed += 1
+        self.game_over = self.check_win()
 
     def draw_status(self, status):
         self.stdscr.addstr(self.height + self.top_offset, (self.width * self.x_multiple) // 2 - 2, status, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
@@ -192,7 +196,7 @@ class Minesweeper:
                 self.stdscr.addstr(y + self.top_offset, x * self.x_multiple + self.left_offset, content, attr)
 
     def refresh_time(self):
-        if not self.game_over and not self.check_win():
+        if not self.game_over:
             elapsed_time = int(time.time() - (self.start_time if self.start_time is not None else time.time()))
             status_bar = f'{elapsed_time:03d}'
             self.stdscr.addstr(0, (self.width * self.x_multiple) // 2 + 11, status_bar, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
@@ -217,28 +221,24 @@ class Minesweeper:
         self.stdscr.addstr(self.height + self.top_offset, 0, bottom_border, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
 
     def left_move(self):
-        if self.cursor_x > 0:
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
-            self.cursor_x -= 1
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.cursor_x = (self.cursor_x - 1) % self.width
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
 
     def right_move(self):
-        if self.cursor_x < self.width - 1:
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
-            self.cursor_x += 1
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.cursor_x = (self.cursor_x + 1) % self.width
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
 
     def up_move(self):
-        if self.cursor_y > 0:
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
-            self.cursor_y -= 1
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.cursor_y = (self.cursor_y - 1) % self.height
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
 
     def down_move(self):
-        if self.cursor_y < self.height - 1:
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
-            self.cursor_y += 1
-            self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f' {self.get_icon()} ', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
+        self.cursor_y = (self.cursor_y + 1) % self.height
+        self.stdscr.addstr(self.cursor_y + self.top_offset, self.cursor_x * self.x_multiple + self.left_offset, f'[{self.get_icon()}]', curses.color_pair(self.get_color(self.cursor_x, self.cursor_y)))
 
 def main(stdscr):
 
@@ -285,10 +285,6 @@ def main(stdscr):
             break
 
     game = Minesweeper(stdscr, width, height, num_mines)
-    game.start_time = int(time.time())
-    stdscr.clear()
-    game.draw_border()
-    game.draw_game()
 
     while True:
         key = stdscr.getch()
@@ -297,14 +293,14 @@ def main(stdscr):
         if key == -1:
             continue
 
-        if not game.game_over and not game.check_win():
+        if not game.game_over:
             if key == ord('h'):
                 game.left_move()
-            elif key == ord('l') and game.cursor_x < game.width - 1:
+            elif key == ord('l'):
                 game.right_move()
-            elif key == ord('k') and game.cursor_y > 0:
+            elif key == ord('k'):
                 game.up_move()
-            elif key == ord('j') and game.cursor_y < game.height - 1:
+            elif key == ord('j'):
                 game.down_move()
             elif key == ord('r'):
                 game.reveal(game.cursor_x, game.cursor_y)
@@ -312,7 +308,8 @@ def main(stdscr):
             elif key == ord('f'):
                 game.toggle_flag(game.cursor_x, game.cursor_y)
         else:
-            pass
+            if key == ord('r'):
+                game = Minesweeper(stdscr, width, height, num_mines)
 
         if game.check_win():
             game.draw_status(" YouWin ")
