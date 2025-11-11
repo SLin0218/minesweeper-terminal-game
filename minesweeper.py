@@ -146,7 +146,8 @@ class Minesweeper:
         else:
             self.board[y][x] = str(adjacent_mines)
         self.num_revealed += 1
-        self.game_over = self.check_win()
+        if not self.game_over:
+            self.game_over = self.check_win()
 
     def draw_status(self, status):
         self.stdscr.addstr(self.height + self.top_offset, (self.width * self.x_multiple) // 2 - 2, status, curses.color_pair(COLOR_STATUS) | curses.A_BOLD)
@@ -293,7 +294,10 @@ def main(stdscr):
         if key == -1:
             continue
 
-        if not game.game_over:
+        if game.game_over:
+            if key == ord('r'):
+                game = Minesweeper(stdscr, width, height, num_mines)
+        else:
             if key == ord('h'):
                 game.left_move()
             elif key == ord('l'):
@@ -307,9 +311,6 @@ def main(stdscr):
                 game.draw_game()
             elif key == ord('f'):
                 game.toggle_flag(game.cursor_x, game.cursor_y)
-        else:
-            if key == ord('r'):
-                game = Minesweeper(stdscr, width, height, num_mines)
 
         if game.check_win():
             game.draw_status(" YouWin ")
